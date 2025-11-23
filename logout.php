@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="en">
+    
+</html>
 <?php
 session_start();
 session_unset();
