@@ -244,7 +244,6 @@ $recent = $conn->query("
                 <?php foreach ($budgetCategories as $cat): ?>
                     <option value="<?= $cat[0] ?>"><?= $cat[1] ?></option>
                 <?php endforeach; ?>
-                <option value="Other">Other</option>
             </select>
 
             <label>Amount</label>
