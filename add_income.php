@@ -29,7 +29,7 @@ while ($row = $categoryQuery->fetch_assoc()) {
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['save_income'])) {
 
     $amount = $_POST['amount'];
-    $category = $_POST['category_id'];
+    $category_id = $_POST['category_id'];
     $date = $_POST['date'];
     $description = $_POST['description'];
     $notes = $_POST['notes'] ?? "";
@@ -40,7 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['save_income'])) {
     ");
 
     $stmt->bind_param("isdiss", 
-        $user_id, $description, $amount, $category, $date, $notes
+        $user_id, $description, $amount, $category_id, $date, $notes
     );
 
     $stmt->execute();
@@ -57,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['edit_income'])) {
     $id = $_POST['id'];
     $date = $_POST['date'];
     $description = $_POST['description'];
-    $category = $_POST['category_id'];
+    $category_id = $_POST['category_id'];
     $amount = $_POST['amount'];
     $notes = $_POST['notes'];
 
@@ -68,7 +68,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['edit_income'])) {
     ");
 
     $stmt->bind_param("ssidsii", 
-        $date, $description, $category, $amount, $notes, $id, $user_id
+        $date, $description, $category_id, $amount, $notes, $id, $user_id
     );
 
     $stmt->execute();
