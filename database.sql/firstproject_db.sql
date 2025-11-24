@@ -25,6 +25,7 @@ CREATE TABLE transactions (
   amount DECIMAL(10,2),
   type ENUM('income','expense'),
   date DATE,
+  notes VARCHAR(255),
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
@@ -36,3 +37,15 @@ CREATE TABLE todos (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+INSERT INTO categories (name, type)
+VALUES
+    ('Food and Dining', 'expense'),
+    ('Transportation', 'expense'),
+    ('Shopping', 'expense'),
+    ('Entertainment', 'expense'),
+    ('Utilities', 'expense'),
+    ('Healthcare', 'expense'),
+    ('Salary', 'income'),
+    ('Business', 'income'),
+    ('Gift', 'income');
