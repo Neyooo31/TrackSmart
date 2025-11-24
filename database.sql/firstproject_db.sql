@@ -25,7 +25,7 @@ CREATE TABLE transactions (
   amount DECIMAL(10,2),
   type ENUM('income','expense'),
   date DATE,
-  notes VARCHAR(255),
+  notes VARCHAR(255) DEFAULT '',
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
