@@ -49,17 +49,17 @@ $recent = $conn->query("SELECT * FROM transactions WHERE user_id=$user_id ORDER 
     <!-- DASHBOARD CARDS -->
     <div class="dashboard-cards">
         <div class="card purple">
-            <h3>Total Balance</h3>
+            <h3><img src="assets/images/totalbalanceIcon.png"  class="dashboard-icon" alt="Image here" ></img>Total Balance</h3>
             <p>₱<?= number_format($balance, 2); ?></p>
         </div>
 
         <div class="card green">
-            <h3>Total Income</h3>
+            <h3><img src="assets/images/totalincIcon.png" class="dashboard-icon" alt="Image here"></img>Total Income</h3>
             <p>₱<?= number_format($total_income, 2); ?></p>
         </div>
 
         <div class="card red">
-            <h3>Total Expenses</h3>
+            <h3><img src="assets/images/totalexpensesIcon.png" class="dashboard-icon" alt="Image here"></img>Total Expenses</h3>
             <p>₱<?= number_format($total_expenses, 2); ?></p>
         </div>
     </div>
@@ -99,7 +99,7 @@ new Chart(ctx, {
     data: {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
         datasets: [{
-            label: 'Amount',
+            label: '',
             data: [40000, 48000, 45000, 60000, 52000, 58000],
             backgroundColor: '#6a0dad'
         }]
@@ -108,6 +108,12 @@ new Chart(ctx, {
         responsive: true,
         scales: {
             y: { beginAtZero: true }
+        },
+
+        plugins: {
+            legend: {
+                display: false 
+            }
         }
     }
 });
