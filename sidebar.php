@@ -6,7 +6,10 @@
     </div>
 </nav> -->
 <div class="sidebar">
-    <h2 class="app-title"><img src="assets/images/logo.png" alt="Logo"></img> TrackSmart</h2>
+    <h2 class="app-title">
+        <img src="assets/images/logo.png" alt="Logo">
+        TrackSmart
+    </h2>
 
     <a href="index.php" class="menu-item">Dashboard</a>
     <a href="add_income.php" class="menu-item">Add Income</a>
@@ -40,11 +43,3 @@ function proceedLogout() {
     window.location.href = "logout.php"; 
 }
 </script>
-<!-- <script>
-    const menuToggle = document.getElementById("menuToggle");
-    const sidebar = document.querySelector(".sidebar");
-
-    menuToggle.addEventListener("click", () => {
-        sidebar.classList.toggle("active");
-    });
-</script> -->

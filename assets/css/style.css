@@ -246,8 +246,6 @@ body {
     overflow-x: auto;
 }
 
-
-
 .topbar {
     display: flex;
     justify-content: space-between;
@@ -873,4 +871,107 @@ body {
 
 .add-btn:hover {
     background: #350067;
+}
+
+/* -------------------------------
+   TO-DO LIST PAGE
+--------------------------------*/
+.todo-wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.todo-input-card {
+    background: #fff;
+    padding: 18px;
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.todo-input, .todo-date {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+.todo-card {
+    background: #fff;
+    margin-top: 25px;
+    padding: 25px;
+    border-radius: 18px;
+    box-shadow: 0px 5px 20px rgba(0,0,0,0.05);
+}
+
+.todo-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.todo-table th {
+    text-align: left;
+    padding-bottom: 14px;
+    color: #777;
+    font-size: 14px;
+}
+
+.todo-table td {
+    padding: 12px 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.todo-table tr:last-child td {
+    border-bottom: none;
+}
+
+.todo-check {
+    width: 18px;
+    height: 18px;
+}
+
+.todo-edit, .todo-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 6px;
+}
+
+.todo-edit:hover {
+    color: #4b0082;
+}
+
+.todo-delete:hover {
+    color: #e74c3c;
+}
+
+.todo-footer {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 10px;
+    font-size: 13px;
+    color: #777;
+}
+
+.done-text {
+    text-decoration: line-through;
+    color: #888 !important;
+}
+.modal-overlay { display:none; }
+.modal-overlay.active { display:flex; }
+
+.actions-col {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.overdue {
+    color: #e63946;
+    font-weight: 600;
 }
