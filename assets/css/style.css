@@ -914,19 +914,29 @@ body {
 
 .todo-table {
     width: 100%;
+    text-align: center;
     border-collapse: collapse;
 }
 
 .todo-table th {
     text-align: left;
     padding-bottom: 14px;
+    padding: 12px 8px;
+    /* font-weight: 600; */
     color: #777;
     font-size: 14px;
+    vertical-align: middle;
+    padding: 10px 8px;
 }
 
 .todo-table td {
+    text-align: left;
     padding: 12px 8px;
     border-bottom: 1px solid #eee;
+}
+.todo-table td:nth-child(2) {
+    text-align: left;
+    padding-left: 12px;
 }
 
 .todo-table tr:last-child td {
@@ -961,6 +971,47 @@ body {
     font-size: 13px;
     color: #777;
 }
+/* Table Row Hover */
+.todo-table tbody tr:hover {
+    background: #f7f7ff;
+    cursor: pointer;
+}
+
+/* Delete button hover */
+.todo-delete:hover {
+    color: #e74c3c;
+    transform: scale(1.2);
+}
+
+/* Edit button hover */
+.todo-edit:hover {
+    color: #6a00ff;
+    transform: scale(1.2);
+}
+
+/* Smooth animations */
+.todo-edit,
+.todo-delete {
+    transition: 0.2s ease;
+}
+.modal-box.small {
+    width: 350px;
+}
+
+.delete-confirm-btn {
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.delete-confirm-btn:hover {
+    background: #c0392b;
+}
+
 
 .done-text {
     text-decoration: line-through;
@@ -972,7 +1023,8 @@ body {
 .actions-col {
     display: flex;
     gap: 10px;
-    justify-content: center;
+    justify-content: left;
+    text-align: left;
 }
 
 .overdue {

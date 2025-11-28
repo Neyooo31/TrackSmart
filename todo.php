@@ -57,28 +57,29 @@ $tasks = $stmt->get_result();
 
                 <tbody id="todoList">
                     <?php while($row = $tasks->fetch_assoc()): ?>
+
                     <tr data-id="<?= $row['id'] ?>">
-    <td>
-        <input type="checkbox" class="todo-check" <?= $row['is_done'] ? 'checked' : '' ?>>
-    </td>
+                <td>
+                    <input type="checkbox" class="todo-check" <?= $row['is_done'] ? 'checked' : '' ?>>
+                </td>
 
-    <td class="<?= $row['is_done'] ? 'done-text' : '' ?>">
-        <?= htmlspecialchars($row['task']) ?>
-    </td>
+                <td class="<?= $row['is_done'] ? 'done-text' : '' ?>">
+                    <?= htmlspecialchars($row['task']) ?>
+                </td>
 
-    <?php 
-$isOverdue = (!empty($row['due_date']) && strtotime($row['due_date']) < strtotime('today') && !$row['is_done']);
-?>
-<td class="<?= $isOverdue ? 'overdue' : '' ?>">
-    <?= !empty($row['due_date']) ? date("m/d/Y", strtotime($row['due_date'])) : "-" ?>
-</td>
+            <?php 
+            $isOverdue = (!empty($row['due_date']) && strtotime($row['due_date']) < strtotime('today') && !$row['is_done']);
+            ?>
+            <td class="<?= $isOverdue ? 'overdue' : '' ?>">
+                <?= !empty($row['due_date']) ? date("m/d/Y", strtotime($row['due_date'])) : "-" ?>
+            </td>
 
-    <td class="actions-col">
-        <button class="todo-edit" data-id="<?= $row['id'] ?>">✏️</button>
-        <button class="todo-delete" data-id="<?= $row['id'] ?>">🗑️</button>
-    </td>
-</tr>
-
+                <td class="actions-col">
+                    <button class="todo-edit" data-id="<?= $row['id'] ?>">✏️</button>
+                    <button class="todo-delete" data-id="<?= $row['id'] ?>">🗑️</button>
+                </td>
+            </tr>
+<!--icon options: ✎ 🖊️🖊🗑️✎𓂃 𓂃🖊🖋-->
                     <?php endwhile; ?>
                     
                 </tbody>
@@ -107,6 +108,22 @@ $isOverdue = (!empty($row['due_date']) && strtotime($row['due_date']) < strtotim
                 <button type="submit" class="save-btn">Save</button>
             </div>
         </form>
+    </div>
+</div>
+<!-- DELETE CONFIRMATION MODAL -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box small">
+        <div class="modal-header">
+            <h2>Delete Task?</h2>
+            <span class="close-btn" id="closeDelete">×</span>
+        </div>
+
+        <p>Are you sure you want to delete this task?</p>
+
+        <div class="modal-actions">
+            <button type="button" class="cancel-btn" id="cancelDelete">Cancel</button>
+            <button type="button" class="delete-confirm-btn" id="confirmDelete">Delete</button>
+        </div>
     </div>
 </div>
 
@@ -160,17 +177,17 @@ document.getElementById("addForm").addEventListener("submit", function(e){
     .then(() => location.reload());
 });
 
-// DELETE
-document.addEventListener("click", function(e){
-    if (e.target.classList.contains("todo-delete")) {
-        let id = e.target.dataset.id;
+// // DELETE
+// document.addEventListener("click", function(e){
+//     if (e.target.classList.contains("todo-delete")) {
+//         let id = e.target.dataset.id;
 
-        fetch("delete_task.php", {
-            method: "POST",
-            body: new URLSearchParams({id})
-        }).then(() => location.reload());
-    }
-});
+//         fetch("delete_task.php", {
+//             method: "POST",
+//             body: new URLSearchParams({id})
+//         }).then(() => location.reload());
+//     }
+// });
 
 // TOGGLE DONE
 document.addEventListener("change", function(e){
@@ -219,6 +236,38 @@ document.getElementById("closeEdit").onclick = () => {
 
 updateCounts();
 </script>
+<script>
+// GLOBAL DELETE ID HOLDER
+let taskToDelete = null;
+
+// When clicking delete button → open modal
+document.addEventListener("click", function(e){
+    if (e.target.classList.contains("todo-delete")) {
+        taskToDelete = e.target.dataset.id;
+        document.getElementById("deleteModal").classList.add("active");
+    }
+});
+
+// Close modal buttons
+document.getElementById("closeDelete").onclick = 
+document.getElementById("cancelDelete").onclick = function () {
+    document.getElementById("deleteModal").classList.remove("active");
+    taskToDelete = null;
+};
+
+// Confirm deletion
+document.getElementById("confirmDelete").onclick = function() {
+    if (!taskToDelete) return;
+
+    fetch("delete_task.php", {
+        method: "POST",
+        body: new URLSearchParams({ id: taskToDelete })
+    }).then(() => {
+        location.reload();
+    });
+};
+</script>
+
 
 </body>
 </html>
