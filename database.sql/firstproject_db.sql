@@ -6,8 +6,8 @@ CREATE TABLE users (
   username VARCHAR(100) NOT NULL,
   email VARCHAR(100) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  -- reset_otp VARCHAR(6) NULL,
-  -- otp_expire INT(11) NULL;
+  reset_otp VARCHAR(6) NULL,
+  otp_expire INT(11) NULL;
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
