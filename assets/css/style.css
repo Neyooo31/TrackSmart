@@ -1052,22 +1052,150 @@ body {
     text-decoration: line-through;
     opacity: 0.7;
 }
+.notif-bell {
+    position: relative;
+    font-size: 22px;
+    cursor: pointer;
+    margin-right: 100px;
+}
+
+.notif-badge {
+    position: relative;
+    top: -13px;
+    right: 18px;
+    background: red;
+    color: white;
+    padding: 3px 6px;
+    font-size: 10px;
+    border-radius: 50%;
+}
 .today-card {
-    background: white;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    margin-top: 20px;
+    background: #ffffff;
+    padding: 22px 25px;
+    border-radius: 18px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    margin-top: 25px;
+    transition: all 0.2s ease;
+    border-left: 5px solid #6a0dad; /* Purple accent */
+}
+
+.today-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.today-card h2 {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #4b0082;
 }
 
 .today-list {
     list-style: none;
-    margin: 0;
-    padding: 0;
+    padding-left: 10px;
+    margin: 8px 0 0;
 }
 
 .today-list li {
-    padding: 5px 0;
+    padding: 6px 0;
     font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.today-list li::before {
+    content: "•";
+    color: #6a0dad;   /* Purple bullet */
+    font-size: 18px;
+    margin-right: 5px;
+}
+
+.tag {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: white;
+}
+
+.tag-work { background: #4C6EF5; }
+.tag-school { background: #845EF7; }
+.tag-personal { background: #37b24d; }
+.tag-urgent { background: #f03e3e; }
+.tag-bills { background: #00338D; } 
+.tag-miscellaneous { background: #e3766d; }
+.tag-payments { background: #d49b1f; }
+/* PANEL */
+.notif-panel {
+    position: fixed;
+    right: -320px;
+    top: 0;
+    height: 100%;
+    width: 320px;
+    background: #fff;
+    box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+    padding: 25px;
+    z-index: 2000;
+    transition: 0.3s ease;
+    overflow-y: auto;
+}
+
+.notif-panel.active {
+    right: 0;
+}
+
+.notif-panel h2 {
+    margin-bottom: 15px;
+    font-size: 22px;
+}
+
+.notif-section-title {
+    font-size: 15px;
+    margin-top: 15px;
+    color: #6a0dad;
+}
+
+.notif-item {
+    background: #f8f5ff;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin: 6px 0;
+}
+
+.notif-item small {
+    color: #555;
+    font-size: 12px;
+}
+
+.overdue-item {
+    border-left: 5px solid #e03131;
+}
+.today-item {
+    border-left: 5px solid #f59f00;
+}
+.week-item {
+    border-left: 5px solid #1971c2;
+}
+
+.empty-msg {
+    color: #777;
+    font-size: 14px;
+    margin: 5px 0 10px;
+}
+.notif-close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #444;
+    transition: 0.2s;
+}
+
+.notif-close-btn:hover {
+    color: #000;
+    transform: scale(1.2);
 }
 

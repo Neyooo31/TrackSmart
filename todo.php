@@ -45,10 +45,14 @@ $tasks = $stmt->get_result();
         <form class="todo-input-card" id="addForm" method="POST">
             <input type="text" name="task" class="todo-input" placeholder="Add new task..." required>
         
-            <select name="category" class="todo-category">
-                <option value="">No Category</option>
+            <select name="category" class="todo-input"  placeholder="Choose Category..."> 
+                <!-- todo-category -->
+                <option value="">Choose Category</option>
                 <option value="Work">Work</option>
                 <option value="School">School</option>
+                <option value="Bills">Bills</option>
+                <option value="Miscellaneous">Miscellaneous</option>
+                <option value="Payments">Payments</option>
                 <option value="Personal">Personal</option>
                 <option value="Urgent">Urgent</option>
             </select>
@@ -65,9 +69,11 @@ $tasks = $stmt->get_result();
                 <thead>
                     <tr>
                         <th>Status</th>
+                        <th>Category</th>
                         <th>Task</th>
                         <th>Due Date</th>
                         <th>Actions</th>
+
                     </tr>
                 </thead>
 
@@ -75,9 +81,21 @@ $tasks = $stmt->get_result();
             <?php while($row = $tasks->fetch_assoc()): ?>
 
             <tr data-id="<?= $row['id'] ?>">
-                <td>
-                    <input type="checkbox" class="todo-check" <?= $row['is_done'] ? 'checked' : '' ?>>
-                </td>
+            <td>
+                <input type="checkbox" class="todo-check" <?= $row['is_done'] ? 'checked' : '' ?>>
+            </td>
+            
+            <td>
+                <?php if (!empty($row['category'])): ?>
+                    <span class="tag tag-<?= strtolower($row['category']) ?>">
+                        <?= $row['category'] ?>
+                    </span>
+                <?php else: ?>
+                    -
+                <?php endif; ?>
+            </td>
+
+
             <td class="<?= $row['is_done'] ? 'done-text-task' : '' ?>">
                 <?= htmlspecialchars($row['task']) ?>
             </td>
@@ -109,7 +127,8 @@ $tasks = $stmt->get_result();
                     <button class="todo-delete" data-id="<?= $row['id'] ?>">🗑️</button>
                 </td>
             </tr>  <!--icon options: ✎ 🖊️🖊🗑️✎𓂃 𓂃🖊🖋✏️✒️✎ᝰ. ⌦-->
-                    <?php endwhile; ?>
+            
+            <?php endwhile; ?>
                     
             </tbody>
             </table>
