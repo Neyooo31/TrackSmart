@@ -6,10 +6,7 @@
     </div>
 </nav> -->
 <div class="sidebar">
-    <h2 class="app-title">
-        <img src="assets/images/logo.png" alt="Logo">
-        TrackSmart
-    </h2>
+    <h2 class="app-title"><img src="assets/images/logo.png" alt="Logo"></img> TrackSmart</h2>
 
     <a href="index.php"class="menu-item"> <svg class="sidebar-icon-svg" width="30" height="30" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M7.5 2.5H3.33333C2.8731 2.5 2.5 2.8731 2.5 3.33333V9.16667C2.5 9.6269 2.8731 10 3.33333 10H7.5C7.96024 10 8.33333 9.6269 8.33333 9.16667V3.33333C8.33333 2.8731 7.96024 2.5 7.5 2.5Z" stroke="#364153" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
@@ -70,3 +67,11 @@ function proceedLogout() {
     window.location.href = "logout.php"; 
 }
 </script>
+<!-- <script>
+    const menuToggle = document.getElementById("menuToggle");
+    const sidebar = document.querySelector(".sidebar");
+
+    menuToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+    });
+</script> -->

@@ -201,15 +201,6 @@ $recent = $conn->query("
             <label>Category</label>
             <select name="category_id" class="input" required>
                 <option value="">Select category</option>
-                <option>Food</option>
-                <option>Utilities</option>
-                <option>Transportation</option>
-                <option>Entertainment</option>
-                <option>Shopping</option>
-                <option>Salary</option>
-                <option>Freelance</option>
-                <option>Business</option>
-                <option>Other</option>
                 <?php foreach ($budgetCategories as $cat): ?>
                     <option value="<?= $cat[0] ?>"><?= $cat[1] ?></option>
                 <?php endforeach; ?>

@@ -23,8 +23,7 @@ if (isset($_GET['delete'])) {
 /* ========================================================
    SAVE NEW TRANSACTION
 ======================================================== */
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['save_transaction'])) 
-    {
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['save_transaction'])) {
 
     $type = $_POST['type'];
     $description = $_POST['description'];
@@ -67,9 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['edit_transaction'])) 
         WHERE id=? AND user_id=?
     ");
 
-    // ✔ FIXED: no spaces inside type string
-    // ✔ FIXED: correct number of parameters
-    $stmt->bind_param("sssdssii",
+    $stmt->bind_param("sssds sii",
         $date, $type, $description, $amount, $category, $notes, $id, $user_id
     );
 
@@ -188,6 +185,7 @@ $transactions = $conn->query("
 
             <label>Date</label>
             <input type="date" name="date" class="input" required>
+
             <label>Type</label>
             <div class="type-switch">
                 <button type="button" class="type-btn active" id="expenseBtn" onclick="setType('expense')">Expense</button>

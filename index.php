@@ -38,17 +38,27 @@ $recent = $conn->query("
     WHERE user_id=$user_id 
     ORDER BY date DESC LIMIT 5
 ");
-/* WEEKLY CHART QUERY */
-$weekly = $conn->query("
-    SELECT 
-        DATE(date) AS day,
-        SUM(CASE WHEN type='income' THEN amount ELSE 0 END) AS income,
-        SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS expense
-    FROM transactions
-    WHERE user_id=$user_id
-    AND date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-    GROUP BY DATE(date)
-    ORDER BY day ASC
+/* MONTHLY CHART QUERY */
+$monthly = $conn->query("
+    SELECT
+        MONTH(date) AS transaction_month,
+    SUM(
+        CASE
+            WHEN type = 'income' THEN amount
+        ELSE 0
+            END
+    ) AS income,
+    SUM(
+        CASE
+            WHEN type = 'expense' THEN amount
+        ELSE 0
+            END
+    ) AS expense
+    FROM transactions WHERE
+        YEAR(date) = YEAR(CURDATE()) AND
+        user_id=$user_id
+    GROUP BY transaction_month
+    ORDER BY transaction_month;
 ");
 
 // Prepare arrays for Chart.js
@@ -56,11 +66,12 @@ $days = [];
 $incomeData = [];
 $expenseData = [];
 
-while ($r = $weekly->fetch_assoc()) {
-    $days[] = date("M d", strtotime($r['day']));
+while ($r = $monthly->fetch_assoc()) {
+    $timestamp = mktime(0, 0, 0, $r['transaction_month'], 1, date('Y'));
+    $days[] = date("M", $timestamp);
     $incomeData[] = $r['income'] ?? 0;
     $expenseData[] = $r['expense'] ?? 0;
-}
+};
 
 /* ===========================
    TODAY'S TASKS  (Feature #5)
@@ -112,9 +123,8 @@ $weekTasks = $conn->query("
     AND due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
     AND is_done=0
 ");
-
-
 ?>
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -123,7 +133,7 @@ $weekTasks = $conn->query("
     <title>Dashboard • TrackSmart</title>
     <link rel="stylesheet" href="assets/css/style.css?v=14">
 
-    <!-- Chart.js -->
+    <!-- Chart.js (for bar chart) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -135,90 +145,90 @@ $weekTasks = $conn->query("
 
     <!-- TOPBAR -->
     <div class="topbar">
-        <h1>Dashboard</h1>
+        <h2>Dashboard</h2>
 
         <div class="right-icons">
 
             <!-- 🔔 NOTIFICATION BELL -->
             <div class="notif-bell">
-                🔔
+                <svg class="notif-bell-icon-svg" fill="#000000" width="30" height="30" viewBox="0 0 24 24" id="notification-bell" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line">
+                    <path id="secondary" d="M19.38,14.38a2.12,2.12,0,0,1,.62,1.5h0A2.12,2.12,0,0,1,17.88,18H6.12A2.12,2.12,0,0,1,4,15.88H4a2.12,2.12,0,0,1,.62-1.5L6,13V9a6,6,0,0,1,6-6h0a6,6,0,0,1,6,6v4Z" fill=rgba(152, 42, 167, 1) stroke-width=2></path>
+                    <path id="primary" d="M12,21h0a3,3,0,0,1-3-3h6A3,3,0,0,1,12,21Zm6-8V9a6,6,0,0,0-6-6h0A6,6,0,0,0,6,9v4L4.62,14.38A2.12,2.12,0,0,0,4,15.88H4A2.12,2.12,0,0,0,6.12,18H17.88A2.12,2.12,0,0,0,20,15.88h0a2.12,2.12,0,0,0-.62-1.5Z" stroke="#364153" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    
                 <?php if ($overdue_count > 0): ?>
                     <span class="notif-badge"><?= $overdue_count ?></span>
                 <?php endif; ?>
             </div>
-
             <span class="welcome">
                 Welcome back, <?= htmlspecialchars($_SESSION['username']); ?>!
             </span>
         </div>
     </div>
-    
+
     <!-- NOTIFICATION PANEL -->
-<div id="notifPanel" class="notif-panel">
-    <div class="notif-close-btn" id="closeNotif">×</div>
+    <div id="notifPanel" class="notif-panel">
+        <div class="notif-close-btn" id="closeNotif">×</div>
 
 
-    <h2>Notifications</h2>
+        <h2>Notifications</h2>
 
-    <!-- OVERDUE -->
-    <h3 class="notif-section-title">Overdue Tasks</h3>
-    <?php if ($overdueTasks->num_rows > 0): ?>
-        <?php while($o = $overdueTasks->fetch_assoc()): ?>
-            <div class="notif-item overdue-item">
-                <strong><?= htmlspecialchars($o['task']); ?></strong>
-                <small>Due: <?= $o['due_date'] ?></small>
-            </div>
-        <?php endwhile; ?>
-    <?php else: ?>
-        <p class="empty-msg">No overdue tasks 🎉</p>
-    <?php endif; ?>
+        <!-- OVERDUE -->
+        <h3 class="notif-section-title">Overdue Tasks</h3>
+        <?php if ($overdueTasks->num_rows > 0): ?>
+            <?php while($o = $overdueTasks->fetch_assoc()): ?>
+                <div class="notif-item overdue-item">
+                    <strong><?= htmlspecialchars($o['task']); ?></strong>
+                    <small>Due: <?= $o['due_date'] ?></small>
+                </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <p class="empty-msg">No overdue tasks 🎉</p>
+        <?php endif; ?>
 
-    <!-- TODAY -->
-    <h3 class="notif-section-title">Today</h3>
-    <?php if ($todayTasksNotif->num_rows > 0): ?>
-        <?php while($t = $todayTasksNotif->fetch_assoc()): ?>
-            <div class="notif-item today-item">
-                <strong><?= htmlspecialchars($t['task']); ?></strong>
-                <small>Due Today</small>
-            </div>
-        <?php endwhile; ?>
-    <?php else: ?>
-        <p class="empty-msg">No tasks today 🎉</p>
-    <?php endif; ?>
+        <!-- TODAY -->
+        <h3 class="notif-section-title">Today</h3>
+        <?php if ($todayTasksNotif->num_rows > 0): ?>
+            <?php while($t = $todayTasksNotif->fetch_assoc()): ?>
+                <div class="notif-item today-item">
+                    <strong><?= htmlspecialchars($t['task']); ?></strong>
+                    <small>Due Today</small>
+                </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <p class="empty-msg">No tasks today 🎉</p>
+        <?php endif; ?>
 
-    <!-- THIS WEEK -->
-    <h3 class="notif-section-title">Next 7 Days</h3>
-    <?php if ($weekTasks->num_rows > 0): ?>
-        <?php while($w = $weekTasks->fetch_assoc()): ?>
-            <div class="notif-item week-item">
-                <strong><?= htmlspecialchars($w['task']); ?></strong>
-                <small>Due: <?= $w['due_date'] ?></small>
-            </div>
-        <?php endwhile; ?>
-    <?php else: ?>
-        <p class="empty-msg">Nothing coming up 👍</p>
-    <?php endif; ?>
+        <!-- THIS WEEK -->
+        <h3 class="notif-section-title">Next 7 Days</h3>
+        <?php if ($weekTasks->num_rows > 0): ?>
+            <?php while($w = $weekTasks->fetch_assoc()): ?>
+                <div class="notif-item week-item">
+                    <strong><?= htmlspecialchars($w['task']); ?></strong>
+                    <small>Due: <?= $w['due_date'] ?></small>
+                </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <p class="empty-msg">Nothing coming up 👍</p>
+        <?php endif; ?>
 
-</div>
+    </div>
 
     <!-- DASHBOARD CARDS -->
     <div class="dashboard-cards">
-
         <div class="card purple">
-            <h3><img src="assets/images/totalbalanceIcon.png" class="dashboard-icon"> &nbsp;Total Balance</h3>
+            <h3><img src="assets/images/totalbalanceIcon.png"  class="dashboard-icon" alt="Image here" ></img>Total Balance</h3>
             <p>₱<?= number_format($balance, 2); ?></p>
         </div>
 
         <div class="card green">
-            <h3><img src="assets/images/totalincIcon.png" class="dashboard-icon"> &nbsp;Total Income</h3>
+            <h3><img src="assets/images/totalincIcon.png" class="dashboard-icon" alt="Image here"></img>Total Income</h3>
             <p>₱<?= number_format($total_income, 2); ?></p>
         </div>
 
         <div class="card red">
-            <h3><img src="assets/images/totalexpensesIcon.png" class="dashboard-icon"> &nbsp;Total Expenses</h3>
+            <h3><img src="assets/images/totalexpensesIcon.png" class="dashboard-icon" alt="Image here"></img>Total Expenses</h3>
             <p>₱<?= number_format($total_expenses, 2); ?></p>
         </div>
-
     </div>
 
     <!-- CHART SECTION -->
@@ -243,7 +253,6 @@ $weekTasks = $conn->query("
         <?php endif; ?>
     </div>
 
-
     <!-- RECENT TRANSACTIONS -->
     <div class="recent-card">
         <h2>Recent Transactions</h2>
@@ -264,40 +273,41 @@ $weekTasks = $conn->query("
 
 </div>
 
-
+<!-- CHART SCRIPT -->
 <script>
-const ctx = document.getElementById("overviewChart");
+const ctx = document.getElementById('overviewChart');
 
 new Chart(ctx, {
-    type: 'line',
+    type: 'bar',
     data: {
         labels: <?= json_encode($days) ?>,
         datasets: [
             {
                 label: 'Income',
                 data: <?= json_encode($incomeData) ?>,
-                borderWidth: 3,
-                borderColor: '#37b24d',
-                tension: 0.3
+                backgroundColor: '#22c55e'
             },
             {
                 label: 'Expenses',
                 data: <?= json_encode($expenseData) ?>,
-                borderWidth: 3,
-                borderColor: '#e03131',
-                tension: 0.3
+                backgroundColor: '#e63946'
             }
         ]
     },
     options: {
         responsive: true,
-        plugins: { legend: { position: 'bottom' } },
-        scales: { y: { beginAtZero: true } }
+        scales: {
+            y: { beginAtZero: true }
+        },
+
+        plugins: {
+            legend: {
+                display: false 
+            }
+        }
     }
 });
-</script>
 
-<script>
 const notifBell = document.querySelector(".notif-bell");
 const notifPanel = document.getElementById("notifPanel");
 
