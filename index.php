@@ -9,19 +9,111 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
+/* ===========================
+   DASHBOARD TOTALS
+   =========================== */
+
 // TOTAL INCOME
-$incomeQuery = $conn->query("SELECT SUM(amount) AS total_income FROM transactions WHERE user_id=$user_id AND type='income'");
+$incomeQuery = $conn->query("
+    SELECT SUM(amount) AS total_income 
+    FROM transactions 
+    WHERE user_id=$user_id AND type='income'
+");
 $total_income = $incomeQuery->fetch_assoc()['total_income'] ?? 0;
 
 // TOTAL EXPENSES
-$expenseQuery = $conn->query("SELECT SUM(amount) AS total_expenses FROM transactions WHERE user_id=$user_id AND type='expense'");
+$expenseQuery = $conn->query("
+    SELECT SUM(amount) AS total_expenses 
+    FROM transactions 
+    WHERE user_id=$user_id AND type='expense'
+");
 $total_expenses = $expenseQuery->fetch_assoc()['total_expenses'] ?? 0;
 
 // BALANCE
 $balance = $total_income - $total_expenses;
 
 // RECENT TRANSACTIONS
-$recent = $conn->query("SELECT * FROM transactions WHERE user_id=$user_id ORDER BY date DESC LIMIT 5");
+$recent = $conn->query("
+    SELECT * FROM transactions 
+    WHERE user_id=$user_id 
+    ORDER BY date DESC LIMIT 5
+");
+/* WEEKLY CHART QUERY */
+$weekly = $conn->query("
+    SELECT 
+        DATE(date) AS day,
+        SUM(CASE WHEN type='income' THEN amount ELSE 0 END) AS income,
+        SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS expense
+    FROM transactions
+    WHERE user_id=$user_id
+    AND date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+    GROUP BY DATE(date)
+    ORDER BY day ASC
+");
+
+// Prepare arrays for Chart.js
+$days = [];
+$incomeData = [];
+$expenseData = [];
+
+while ($r = $weekly->fetch_assoc()) {
+    $days[] = date("M d", strtotime($r['day']));
+    $incomeData[] = $r['income'] ?? 0;
+    $expenseData[] = $r['expense'] ?? 0;
+}
+
+/* ===========================
+   TODAY'S TASKS  (Feature #5)
+   =========================== */
+
+$today = date("Y-m-d");
+
+$todayTasks = $conn->prepare("
+    SELECT task, due_date 
+    FROM todos 
+    WHERE user_id=? AND due_date=? AND is_done=0
+");
+$todayTasks->bind_param("is", $user_id, $today);
+$todayTasks->execute();
+$today_results = $todayTasks->get_result();
+
+
+/* ===========================
+   NOTIFICATION BELL COUNTER
+   =========================== */
+
+$notifQuery = $conn->query("
+    SELECT COUNT(*) AS overdue_count
+    FROM todos 
+    WHERE user_id=$user_id
+    AND due_date < CURDATE()
+    AND is_done = 0
+");
+$overdue_count = $notifQuery->fetch_assoc()['overdue_count'] ?? 0;
+
+/* NOTIFICATION TASK LISTS */
+$overdueTasks = $conn->query("
+    SELECT task, due_date 
+    FROM todos 
+    WHERE user_id=$user_id AND due_date < CURDATE() AND is_done=0
+");
+
+$todayTasksNotif = $conn->query("
+    SELECT task, due_date 
+    FROM todos 
+    WHERE user_id=$user_id AND due_date = CURDATE() AND is_done=0
+");
+
+$weekTasks = $conn->query("
+    SELECT task, due_date 
+    FROM todos
+    WHERE user_id=$user_id 
+    AND due_date > CURDATE() 
+    AND due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+    AND is_done=0
+");
+
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -31,7 +123,7 @@ $recent = $conn->query("SELECT * FROM transactions WHERE user_id=$user_id ORDER 
     <title>Dashboard • TrackSmart</title>
     <link rel="stylesheet" href="assets/css/style.css?v=14">
 
-    <!-- Chart.js (for bar chart) -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -41,27 +133,92 @@ $recent = $conn->query("SELECT * FROM transactions WHERE user_id=$user_id ORDER 
 
 <div class="main-content">
 
+    <!-- TOPBAR -->
     <div class="topbar">
         <h1>Dashboard</h1>
-        <span class="welcome">Welcome back, <?= $_SESSION['username']; ?>!</span>
+
+        <div class="right-icons">
+
+            <!-- 🔔 NOTIFICATION BELL -->
+            <div class="notif-bell">
+                🔔
+                <?php if ($overdue_count > 0): ?>
+                    <span class="notif-badge"><?= $overdue_count ?></span>
+                <?php endif; ?>
+            </div>
+
+            <span class="welcome">
+                Welcome back, <?= htmlspecialchars($_SESSION['username']); ?>!
+            </span>
+        </div>
     </div>
+    
+    <!-- NOTIFICATION PANEL -->
+<div id="notifPanel" class="notif-panel">
+    <div class="notif-close-btn" id="closeNotif">×</div>
+
+
+    <h2>Notifications</h2>
+
+    <!-- OVERDUE -->
+    <h3 class="notif-section-title">Overdue Tasks</h3>
+    <?php if ($overdueTasks->num_rows > 0): ?>
+        <?php while($o = $overdueTasks->fetch_assoc()): ?>
+            <div class="notif-item overdue-item">
+                <strong><?= htmlspecialchars($o['task']); ?></strong>
+                <small>Due: <?= $o['due_date'] ?></small>
+            </div>
+        <?php endwhile; ?>
+    <?php else: ?>
+        <p class="empty-msg">No overdue tasks 🎉</p>
+    <?php endif; ?>
+
+    <!-- TODAY -->
+    <h3 class="notif-section-title">Today</h3>
+    <?php if ($todayTasksNotif->num_rows > 0): ?>
+        <?php while($t = $todayTasksNotif->fetch_assoc()): ?>
+            <div class="notif-item today-item">
+                <strong><?= htmlspecialchars($t['task']); ?></strong>
+                <small>Due Today</small>
+            </div>
+        <?php endwhile; ?>
+    <?php else: ?>
+        <p class="empty-msg">No tasks today 🎉</p>
+    <?php endif; ?>
+
+    <!-- THIS WEEK -->
+    <h3 class="notif-section-title">Next 7 Days</h3>
+    <?php if ($weekTasks->num_rows > 0): ?>
+        <?php while($w = $weekTasks->fetch_assoc()): ?>
+            <div class="notif-item week-item">
+                <strong><?= htmlspecialchars($w['task']); ?></strong>
+                <small>Due: <?= $w['due_date'] ?></small>
+            </div>
+        <?php endwhile; ?>
+    <?php else: ?>
+        <p class="empty-msg">Nothing coming up 👍</p>
+    <?php endif; ?>
+
+</div>
 
     <!-- DASHBOARD CARDS -->
     <div class="dashboard-cards">
+
         <div class="card purple">
-            <h3><img src="assets/images/totalbalanceIcon.png"  class="dashboard-icon" alt="Image here" ></img>Total Balance</h3>
+            <h3><img src="assets/images/totalbalanceIcon.png" class="dashboard-icon"> &nbsp;Total Balance</h3>
             <p>₱<?= number_format($balance, 2); ?></p>
         </div>
 
         <div class="card green">
-            <h3><img src="assets/images/totalincIcon.png" class="dashboard-icon" alt="Image here"></img>Total Income</h3>
+            <h3><img src="assets/images/totalincIcon.png" class="dashboard-icon"> &nbsp;Total Income</h3>
             <p>₱<?= number_format($total_income, 2); ?></p>
         </div>
 
         <div class="card red">
-            <h3><img src="assets/images/totalexpensesIcon.png" class="dashboard-icon" alt="Image here"></img>Total Expenses</h3>
+            <h3><img src="assets/images/totalexpensesIcon.png" class="dashboard-icon"> &nbsp;Total Expenses</h3>
             <p>₱<?= number_format($total_expenses, 2); ?></p>
         </div>
+
     </div>
 
     <!-- CHART SECTION -->
@@ -70,6 +227,23 @@ $recent = $conn->query("SELECT * FROM transactions WHERE user_id=$user_id ORDER 
         <canvas id="overviewChart"></canvas>
     </div>
 
+    <!-- TODAY'S TASKS (Feature #5) -->
+    <div class="today-card">
+        <h2>Today's Tasks</h2>
+
+        <?php if ($today_results->num_rows > 0): ?>
+            <ul class="today-list">
+            <?php while ($t = $today_results->fetch_assoc()): ?>
+                <li>• <?= htmlspecialchars($t['task']); ?></li>
+            <?php endwhile; ?>
+            </ul>
+
+        <?php else: ?>
+            <p>No tasks for today 🎉</p>
+        <?php endif; ?>
+    </div>
+
+
     <!-- RECENT TRANSACTIONS -->
     <div class="recent-card">
         <h2>Recent Transactions</h2>
@@ -77,7 +251,7 @@ $recent = $conn->query("SELECT * FROM transactions WHERE user_id=$user_id ORDER 
         <?php while ($row = $recent->fetch_assoc()): ?>
             <div class="recent-item">
                 <div>
-                    <strong><?= $row['description']; ?></strong><br>
+                    <strong><?= htmlspecialchars($row['description']); ?></strong><br>
                     <small><?= $row['date']; ?> • <?= ucfirst($row['type']); ?></small>
                 </div>
 
@@ -90,32 +264,50 @@ $recent = $conn->query("SELECT * FROM transactions WHERE user_id=$user_id ORDER 
 
 </div>
 
-<!-- CHART SCRIPT -->
+
 <script>
-const ctx = document.getElementById('overviewChart');
+const ctx = document.getElementById("overviewChart");
 
 new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [{
-            label: '',
-            data: [40000, 48000, 45000, 60000, 52000, 58000],
-            backgroundColor: '#6a0dad'
-        }]
+        labels: <?= json_encode($days) ?>,
+        datasets: [
+            {
+                label: 'Income',
+                data: <?= json_encode($incomeData) ?>,
+                borderWidth: 3,
+                borderColor: '#37b24d',
+                tension: 0.3
+            },
+            {
+                label: 'Expenses',
+                data: <?= json_encode($expenseData) ?>,
+                borderWidth: 3,
+                borderColor: '#e03131',
+                tension: 0.3
+            }
+        ]
     },
     options: {
         responsive: true,
-        scales: {
-            y: { beginAtZero: true }
-        },
-
-        plugins: {
-            legend: {
-                display: false 
-            }
-        }
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true } }
     }
+});
+</script>
+
+<script>
+const notifBell = document.querySelector(".notif-bell");
+const notifPanel = document.getElementById("notifPanel");
+
+notifBell.addEventListener("click", () => {
+    notifPanel.classList.toggle("active");
+});
+</script>
+<script>
+document.getElementById("closeNotif").addEventListener("click", () => {
+    document.getElementById("notifPanel").classList.remove("active");
 });
 </script>
 

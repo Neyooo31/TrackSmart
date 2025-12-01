@@ -26,6 +26,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($user && password_verify($password, $user['password'])) {
       // Success: set session, go to dashboard
+      // $_SESSION['user_id'] = $row['id'];
       $_SESSION['user_id']  = $user['id'];
       $_SESSION['username'] = $user['username'];
       header("Location: index.php");
