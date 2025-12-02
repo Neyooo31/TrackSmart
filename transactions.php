@@ -66,7 +66,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['edit_transaction'])) 
         WHERE id=? AND user_id=?
     ");
 
-    $stmt->bind_param("sssds sii",
+    // ✔ FIXED: no spaces inside type string
+    // ✔ FIXED: correct number of parameters
+    $stmt->bind_param("sssdssii",
         $date, $type, $description, $amount, $category, $notes, $id, $user_id
     );
 
@@ -92,9 +94,7 @@ $transactions = $conn->query("
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Transactions • TrackSmart</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=15">
-    <!-- Dark Mode Script -->
-    <script src="assets/js/darkmode.js"></script>
+    <link rel="stylesheet" href="assets/css/style.css?v=21" />
 </head>
 
 <body>
@@ -187,7 +187,6 @@ $transactions = $conn->query("
 
             <label>Date</label>
             <input type="date" name="date" class="input" required>
-
             <label>Type</label>
             <div class="type-switch">
                 <button type="button" class="type-btn active" id="expenseBtn" onclick="setType('expense')">Expense</button>
@@ -255,7 +254,7 @@ $transactions = $conn->query("
             <label>Category</label>
             <select id="edit_category" name="category" class="input" required>
                 <option>Food</option>
-                <option>Utilities</option>
+                <option>Utilities</option>                                
                 <option>Transportation</option>
                 <option>Entertainment</option>
                 <option>Shopping</option>
