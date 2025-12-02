@@ -33,6 +33,8 @@ $recent = $conn->query("SELECT * FROM transactions WHERE user_id=$user_id ORDER 
 
     <!-- Chart.js (for bar chart) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Dark Mode Script -->
+    <script src="assets/js/darkmode.js"></script>
 </head>
 
 <body>
