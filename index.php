@@ -135,6 +135,8 @@ $weekTasks = $conn->query("
 
     <!-- Chart.js (for bar chart) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Dark Mode Script -->
+    <script src="assets/js/darkmode.js"></script>
 </head>
 
 <body>
@@ -151,7 +153,7 @@ $weekTasks = $conn->query("
 
             <!-- 🔔 NOTIFICATION BELL -->
             <div class="notif-bell">
-                <svg class="notif-bell-icon-svg" fill="#000000" width="30" height="30" viewBox="0 0 24 24" id="notification-bell" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line">
+                <svg class="notif-bell-icon-svg" fill="#000000" width="26" height="26" viewBox="0 0 24 24" id="notification-bell" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line">
                     <path id="secondary" d="M19.38,14.38a2.12,2.12,0,0,1,.62,1.5h0A2.12,2.12,0,0,1,17.88,18H6.12A2.12,2.12,0,0,1,4,15.88H4a2.12,2.12,0,0,1,.62-1.5L6,13V9a6,6,0,0,1,6-6h0a6,6,0,0,1,6,6v4Z" fill=rgba(152, 42, 167, 1) stroke-width=2></path>
                     <path id="primary" d="M12,21h0a3,3,0,0,1-3-3h6A3,3,0,0,1,12,21Zm6-8V9a6,6,0,0,0-6-6h0A6,6,0,0,0,6,9v4L4.62,14.38A2.12,2.12,0,0,0,4,15.88H4A2.12,2.12,0,0,0,6.12,18H17.88A2.12,2.12,0,0,0,20,15.88h0a2.12,2.12,0,0,0-.62-1.5Z" stroke="#364153" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
                     
@@ -216,17 +218,17 @@ $weekTasks = $conn->query("
     <!-- DASHBOARD CARDS -->
     <div class="dashboard-cards">
         <div class="card purple">
-            <h3><img src="assets/images/totalbalanceIcon.png"  class="dashboard-icon" alt="Image here" ></img>Total Balance</h3>
+            <h3><img src="assets/images/totalbalanceIcon.png"  class="dashboard-icon" alt="Image here" ></img>&nbsp;Total Balance</h3>
             <p>₱<?= number_format($balance, 2); ?></p>
         </div>
 
         <div class="card green">
-            <h3><img src="assets/images/totalincIcon.png" class="dashboard-icon" alt="Image here"></img>Total Income</h3>
+            <h3><img src="assets/images/totalincIcon.png" class="dashboard-icon" alt="Image here"></img>&nbsp;Total Income</h3>
             <p>₱<?= number_format($total_income, 2); ?></p>
         </div>
 
         <div class="card red">
-            <h3><img src="assets/images/totalexpensesIcon.png" class="dashboard-icon" alt="Image here"></img>Total Expenses</h3>
+            <h3><img src="assets/images/totalexpensesIcon.png" class="dashboard-icon" alt="Image here"></img>&nbsp;Total Expenses</h3>
             <p>₱<?= number_format($total_expenses, 2); ?></p>
         </div>
     </div>

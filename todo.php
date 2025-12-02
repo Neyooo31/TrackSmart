@@ -1,294 +1,323 @@
 <?php
 session_start();
+require 'db_connect.php';
+
 if (!isset($_SESSION['user_id'])) {
-    die("User not logged in. SESSION ID missing.");
+    header("Location: login.php");
+    exit;
 }
 
-$user_id = $_SESSION['user_id']; // must already be set at login
-require 'db_connect.php';
-var_dump($_SESSION['user_id']);
+$user_id = $_SESSION['user_id'];
 
-// Fetch tasks
-$stmt = $conn->prepare("SELECT * FROM todos WHERE user_id = ? ORDER BY id DESC");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$tasks = $stmt->get_result();
+// -------------------------
+// ADD NEW TASK
+// -------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_task'])) {
+    $task = trim($_POST['task'] ?? '');
+    $due_date = $_POST['due_date'] ?? null;
+
+    if ($task !== '') {
+        $stmt = $conn->prepare("
+            INSERT INTO todos (user_id, task, due_date, status)
+            VALUES (?, ?, ?, 'pending')
+        ");
+        $stmt->bind_param("iss", $user_id, $task, $due_date);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    header("Location: todo.php");
+    exit;
+}
+
+// -------------------------
+// EDIT TASK
+// -------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_task'])) {
+    $id       = (int)($_POST['id'] ?? 0);
+    $task     = trim($_POST['task'] ?? '');
+    $due_date = $_POST['due_date'] ?? null;
+
+    if ($id > 0 && $task !== '') {
+        $stmt = $conn->prepare("
+            UPDATE todos
+               SET task = ?, due_date = ?
+             WHERE id = ? AND user_id = ?
+        ");
+        $stmt->bind_param("ssii", $task, $due_date, $id, $user_id);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    header("Location: todo.php");
+    exit;
+}
+
+// -------------------------
+// TOGGLE STATUS (checkbox)
+// -------------------------
+if (isset($_GET['toggle'])) {
+    $id = (int)$_GET['toggle'];
+
+    // Get current status
+    $stmt = $conn->prepare("
+        SELECT status FROM todos
+         WHERE id = ? AND user_id = ?
+    ");
+    $stmt->bind_param("ii", $id, $user_id);
+    $stmt->execute();
+    $stmt->bind_result($status);
+    $stmt->fetch();
+    $stmt->close();
+
+    if ($status === 'pending' || $status === 'done') {
+        $newStatus = ($status === 'pending') ? 'done' : 'pending';
+
+        $stmt = $conn->prepare("
+            UPDATE todos
+               SET status = ?
+             WHERE id = ? AND user_id = ?
+        ");
+        $stmt->bind_param("sii", $newStatus, $id, $user_id);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    header("Location: todo.php");
+    exit;
+}
+
+// -------------------------
+// DELETE TASK
+// -------------------------
+if (isset($_GET['delete'])) {
+    $id = (int)$_GET['delete'];
+
+    $stmt = $conn->prepare("
+        DELETE FROM todos
+         WHERE id = ? AND user_id = ?
+    ");
+    $stmt->bind_param("ii", $id, $user_id);
+    $stmt->execute();
+    $stmt->close();
+
+    header("Location: todo.php");
+    exit;
+}
+
+// -------------------------
+// FETCH TASKS
+// -------------------------
+$tasks = $conn->prepare("
+    SELECT id, task, due_date, status
+      FROM todos
+     WHERE user_id = ?
+  ORDER BY status = 'done',        -- pending first
+           (due_date IS NULL),     -- tasks with dates first
+           due_date ASC,
+           id DESC
+");
+$tasks->bind_param("i", $user_id);
+$tasks->execute();
+$result = $tasks->get_result();
+
+// Count pending/completed
+$pending = 0;
+$completed = 0;
+while ($row = $result->fetch_assoc()) {
+    if ($row['status'] === 'done') $completed++;
+    else $pending++;
+    $rows[] = $row; // store in array for later rendering
+}
+$tasks->close();
+
 ?>
-
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>To-Do-List • TrackSmart</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="assets/css/style.css?v=14">
+    <meta charset="UTF-8">
+    <title>To-Do List • TrackSmart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="assets/css/style.css?v=30">
 </head>
-
 <body>
+
 <?php include 'sidebar.php'; ?>
 
-    <div class="main-content">
-        <div class="todo-wrapper">
-            <div class="header-area">
-                <div class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</div>
+<div class="main-content">
+    <div class="todo-wrapper">
+
+        <!-- HEADER -->
+        <div class="todo-header">
+            <div class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('active')">
+                ☰
+            </div>
+            <div>
                 <h1>To-Do List</h1>
                 <p class="subtext">Manage your financial tasks and reminders</p>
             </div>
+        </div>
 
-        <!-- ADD TASK INPUTS -->
-        <!-- <form class="todo-input-card" id="addForm">
-            <input type="text" name="task" class="todo-input" placeholder="Add new task...">
-            <input type="date"  name="due_date" class="todo-date">
-            <button class="add-btn" id="addTaskBtn">+ Add Task</button>
-        </form> -->
+        <!-- TOP BAR (input + button) -->
+        <div class="todo-topbar">
+            <input
+                type="text"
+                id="quickTaskInput"
+                class="task-input"
+                placeholder="Add new task..."
+            >
+            <button class="add-btn" onclick="openAddModal()">
+                + Add Task
+            </button>
+        </div>
 
-        <form class="todo-input-card" id="addForm" method="POST">
-            <input type="text" name="task" class="todo-input" placeholder="Add new task..." required>
-        
-            <select name="category" class="todo-input"  placeholder="Choose Category..."> 
-                <!-- todo-category -->
-                <option value="">Choose Category</option>
-                <option value="Work">Work</option>
-                <option value="School">School</option>
-                <option value="Bills">Bills</option>
-                <option value="Miscellaneous">Miscellaneous</option>
-                <option value="Payments">Payments</option>
-                <option value="Personal">Personal</option>
-                <option value="Urgent">Urgent</option>
-            </select>
-        
-            <input type="date" name="due_date" class="todo-date">
-        
-            <button class="add-btn" id="addTaskBtn">+ Add Task</button>
-        </form>
-
-         <!-- TASK TABLE -->
+        <!-- TABLE CARD -->
         <div class="todo-card">
-
             <table class="todo-table">
                 <thead>
                     <tr>
-                        <th>Status</th>
-                        <th>Category</th>
+                        <th class="status-col">Status</th>
                         <th>Task</th>
-                        <th>Due Date</th>
-                        <th>Actions</th>
-
+                        <th class="duedate-col">Due Date</th>
+                        <th class="actions-col">Actions</th>
                     </tr>
                 </thead>
-
-            <tbody id="todoList">
-            <?php while($row = $tasks->fetch_assoc()): ?>
-
-            <tr data-id="<?= $row['id'] ?>">
-            <td>
-                <input type="checkbox" class="todo-check" <?= $row['is_done'] ? 'checked' : '' ?>>
-            </td>
-            
-            <td>
-                <?php if (!empty($row['category'])): ?>
-                    <span class="tag tag-<?= strtolower($row['category']) ?>">
-                        <?= $row['category'] ?>
-                    </span>
+                <tbody>
+                <?php if (empty($rows)): ?>
+                    <tr>
+                        <td colspan="4" class="empty">No tasks yet. Add your first task above.</td>
+                    </tr>
                 <?php else: ?>
-                    -
+                    <?php foreach ($rows as $t): ?>
+                        <tr class="<?= $t['status'] === 'done' ? 'row-done' : '' ?>">
+                            <td class="status-cell">
+                                <input
+                                    type="checkbox"
+                                    class="status-checkbox"
+                                    <?= $t['status'] === 'done' ? 'checked' : '' ?>
+                                    onchange="toggleStatus(<?= (int)$t['id'] ?>)"
+                                >
+                            </td>
+                            <td class="task-cell">
+                                <?= htmlspecialchars($t['task']) ?>
+                            </td>
+                            <td class="duedate-cell">
+                                <?= $t['due_date'] ? htmlspecialchars($t['due_date']) : '—' ?>
+                            </td>
+                            <td class="actions">
+                                <button
+                                    class="icon-btn"
+                                    onclick="openEditModal(
+                                        '<?= (int)$t['id'] ?>',
+                                        '<?= htmlspecialchars($t['task'], ENT_QUOTES) ?>',
+                                        '<?= $t['due_date'] ?>'
+                                    )"
+                                >✏</button>
+
+                                <button
+                                    class="icon-btn delete"
+                                    onclick="deleteTask(<?= (int)$t['id'] ?>)"
+                                >🗑</button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
                 <?php endif; ?>
-            </td>
-
-
-            <td class="<?= $row['is_done'] ? 'done-text-task' : '' ?>">
-                <?= htmlspecialchars($row['task']) ?>
-            </td>
-                
-            <?php 
-                $today = strtotime('today');
-                $dueDate = !empty($row['due_date']) ? strtotime($row['due_date']) : null;
-
-                $isOverdue = $dueDate && $dueDate < $today && !$row['is_done'];
-                $isToday = $dueDate && $dueDate == $today && !$row['is_done'];
-                $isThisWeek = $dueDate && $dueDate > $today && $dueDate <= strtotime('+7 days') && !$row['is_done'];
-                // $isOverdue = 
-                //     (!empty($row['due_date']) && 
-                //     strtotime($row['due_date']) < strtotime('today') && 
-                //     !$row['is_done']);
-            ?>
-
-            <td class="
-                <?= $isOverdue ? 'overdue' : '' ?>
-                <?= $isToday ? 'due-today' : '' ?>
-                <?= $isThisWeek ? 'due-week' : '' ?>
-            ">
-                <?= !empty($row['due_date']) ? 
-                date("m/d/Y", strtotime($row['due_date'])) : "-" ?>
-            </td>
-
-                <td class="actions-col">
-                    <button class="todo-edit" data-id="<?= $row['id'] ?>">✎ᝰ</button>
-                    <button class="todo-delete" data-id="<?= $row['id'] ?>">🗑️</button>
-                </td>
-            </tr>  <!--icon options: ✎ 🖊️🖊🗑️✎𓂃 𓂃🖊🖋✏️✒️✎ᝰ. ⌦-->
-            
-            <?php endwhile; ?>
-                    
-            </tbody>
+                </tbody>
             </table>
 
-                <div class="todo-footer">
-                    <span id="pendingCount">0 pending</span>
-                    <span id="completedCount">0 completed</span>
-                </div>
+            <div class="todo-footer">
+                <span><?= $pending ?> pending tasks</span>
+                <span><?= $completed ?> completed</span>
             </div>
         </div>
-    </div>
 
-    <!-- EDIT MODAL -->
-<div class="modal-overlay" id="editModal">
+    </div>
+</div>
+
+<!-- ADD TASK MODAL -->
+<div id="addModal" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">
-            <h2>Edit Task</h2>
-            <span class="close-btn" id="closeEdit">×</span>
+            <h2>Add Task</h2>
+            <span class="close-btn" onclick="closeAddModal()">✕</span>
         </div>
-        <form id="editForm">
-            <input type="hidden" name="id" id="editId">
-            <input type="text" name="task" id="editTask" class="input" required>
+
+        <form method="post">
+            <input type="hidden" name="add_task" value="1">
+
+            <label>Task</label>
+            <input type="text" id="add_task" name="task" class="input" required>
+
+            <label>Due Date</label>
+            <input type="date" id="add_due_date" name="due_date" class="input">
+
             <div class="modal-actions">
-                <button type="button" class="cancel-btn" id="cancelEdit">Cancel</button>
-                <button type="submit" class="save-btn">Save</button>
+                <button type="button" class="cancel-btn" onclick="closeAddModal()">Cancel</button>
+                <button type="submit" class="save-btn">Save Task</button>
             </div>
         </form>
     </div>
 </div>
-<!-- DELETE CONFIRMATION MODAL -->
-<div class="modal-overlay" id="deleteModal">
-    <div class="modal-box small">
+
+<!-- EDIT TASK MODAL -->
+<div id="editModal" class="modal-overlay">
+    <div class="modal-box">
         <div class="modal-header">
-            <h2>Delete Task?</h2>
-            <span class="close-btn" id="closeDelete">×</span>
+            <h2>Edit Task</h2>
+            <span class="close-btn" onclick="closeEditModal()">✕</span>
         </div>
 
-        <p>Are you sure you want to delete this task?</p>
+        <form method="post">
+            <input type="hidden" name="edit_task" value="1">
+            <input type="hidden" id="edit_id" name="id">
 
-        <div class="modal-actions">
-            <button type="button" class="cancel-btn" id="cancelDelete">Cancel</button>
-            <button type="button" class="delete-confirm-btn" id="confirmDelete">Delete</button>
-        </div>
+            <label>Task</label>
+            <input type="text" id="edit_task" name="task" class="input" required>
+
+            <label>Due Date</label>
+            <input type="date" id="edit_due_date" name="due_date" class="input">
+
+            <div class="modal-actions">
+                <button type="button" class="cancel-btn" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="save-btn">Save Changes</button>
+            </div>
+        </form>
     </div>
 </div>
 
-
 <script>
-    let todoList = document.getElementById("todoList");
-    let pendingCount = document.getElementById("pendingCount");
-    let completedCount = document.getElementById("completedCount");
-    let addTaskBtn = document.getElementById("addTaskBtn");
-
-    function updateCounts() {
-        let checks = document.querySelectorAll(".todo-check");
-        let done = 0;
-        checks.forEach(c => { if (c.checked) done++; });
-
-        completedCount.textContent = done + " completed";
-        pendingCount.textContent = (checks.length - done) + " pending";
-    }
-</script>
-
-<script>
-// COUNT
-function updateCounts() {
-    let total = document.querySelectorAll(".todo-check").length;
-    let done = document.querySelectorAll(".todo-check:checked").length;
-
-    document.getElementById("pendingCount").innerText = (total - done) + " pending";
-    document.getElementById("completedCount").innerText = done + " completed";
+// --------- MODALS ----------
+function openAddModal() {
+    const quick = document.getElementById('quickTaskInput').value.trim();
+    document.getElementById('add_task').value = quick;
+    document.getElementById('addModal').style.display = 'flex';
+}
+function closeAddModal() {
+    document.getElementById('addModal').style.display = 'none';
 }
 
-// ADD
-document.getElementById("addForm").addEventListener("submit", function(e){
-    e.preventDefault();
+function openEditModal(id, task, due_date) {
+    document.getElementById('edit_id').value = id;
+    document.getElementById('edit_task').value = task;
+    document.getElementById('edit_due_date').value = due_date || '';
 
-    let formData = new FormData(this);
+    document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
 
-    fetch("add_task.php", { method: "POST", body: formData })
-    .then(() => location.reload());
-});
+// --------- ACTIONS ----------
+function toggleStatus(id) {
+    window.location = 'todo.php?toggle=' + id;
+}
 
-// TOGGLE DONE
-document.addEventListener("change", function(e){
-    if (e.target.classList.contains("todo-check")) {
-        let id = e.target.closest("tr").dataset.id;
-        let is_done = e.target.checked ? 1 : 0;
-
-        fetch("toggle_task.php", {
-            method: "POST",
-            body: new URLSearchParams({id, is_done})
-        });
-
-        updateCounts();
+function deleteTask(id) {
+    if (confirm('Delete this task?')) {
+        window.location = 'todo.php?delete=' + id;
     }
-});
-
-// EDIT — OPEN MODAL
-document.addEventListener("click", function(e){
-    if (e.target.classList.contains("todo-edit")) {
-        let row = e.target.closest("tr");
-        let id = row.dataset.id;
-        let task = row.children[1].innerText;
-
-        document.getElementById("editId").value = id;
-        document.getElementById("editTask").value = task;
-
-        document.getElementById("editModal").classList.add("active");
-    }
-});
-
-// EDIT — SAVE
-document.getElementById("editForm").addEventListener("submit", function(e){
-    e.preventDefault();
-
-    fetch("update_task.php", {
-        method: "POST",
-        body: new FormData(this)
-    }).then(() => location.reload());
-});
-
-// CLOSE MODAL
-document.getElementById("cancelEdit").onclick =
-document.getElementById("closeEdit").onclick = () => {
-    document.getElementById("editModal").classList.remove("active");
-};
-
-updateCounts();
+}
 </script>
-<script>
-// GLOBAL DELETE ID HOLDER
-let taskToDelete = null;
 
-// When clicking delete button → open modal
-document.addEventListener("click", function(e){
-    if (e.target.classList.contains("todo-delete")) {
-        taskToDelete = e.target.dataset.id;
-        document.getElementById("deleteModal").classList.add("active");
-    }
-});
-
-// Close modal buttons
-document.getElementById("closeDelete").onclick = 
-document.getElementById("cancelDelete").onclick = function () {
-    document.getElementById("deleteModal").classList.remove("active");
-    taskToDelete = null;
-};
-
-// Confirm deletion
-document.getElementById("confirmDelete").onclick = function() {
-    if (!taskToDelete) return;
-
-    fetch("delete_task.php", {
-        method: "POST",
-        body: new URLSearchParams({ id: taskToDelete })
-    }).then(() => {
-        location.reload();
-    });
-};
-</script>
 </body>
 </html>

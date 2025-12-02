@@ -1,158 +1,244 @@
 <?php
 session_start();
-include "db_connect.php";
+require 'db_connect.php';
 
 if (!isset($_SESSION['user_id'])) {
-    die("SESSION MISSING");
+    header("Location: login.php");
+    exit;
 }
 
 $user_id = $_SESSION['user_id'];
 
-/* --- TOTAL INCOME --- */
-$income = $conn->prepare("SELECT SUM(amount) FROM transactions WHERE user_id=? AND type='income'");
-$income->bind_param("i", $user_id);
-$income->execute();
-$total_income = $income->get_result()->fetch_row()[0] ?? 0;
+// =========================
+// TOTALS (INCOME / EXPENSE)
+// =========================
+$totalIncome = 0;
+$totalExpense = 0;
 
-/* --- TOTAL EXPENSES --- */
-$expense = $conn->prepare("SELECT SUM(amount) FROM transactions WHERE user_id=? AND type='expense'");
-$expense->bind_param("i", $user_id);
-$expense->execute();
-$total_expenses = $expense->get_result()->fetch_row()[0] ?? 0;
-
-$net_savings = $total_income - $total_expenses;
-
-/* --- CATEGORY BREAKDOWN --- */
-$cat = $conn->prepare("
-    SELECT c.name, SUM(t.amount) AS total
-    FROM transactions t
-    JOIN categories c ON t.category_id = c.id
-    WHERE t.user_id=? AND t.type='expense'
-    GROUP BY c.name
-");
-$cat->bind_param("i", $user_id);
-$cat->execute();
-$category_data = $cat->get_result();
-
-/* --- INCOME VS EXPENSE BY MONTH --- */
-$monthly = $conn->prepare("
+$totals = $conn->query("
     SELECT 
-        DATE_FORMAT(date, '%b') AS month,
-        SUM(CASE WHEN type='income' THEN amount ELSE 0 END) AS income_total,
-        SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS expense_total
+        SUM(CASE WHEN type = 'income'  THEN amount ELSE 0 END) AS total_income,
+        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS total_expense
     FROM transactions
-    WHERE user_id=?
-    GROUP BY MONTH(date)
-    ORDER BY MONTH(date)
+    WHERE user_id = $user_id
 ");
-$monthly->bind_param("i", $user_id);
-$monthly->execute();
-$monthly_data = $monthly->get_result();
 
+if ($row = $totals->fetch_assoc()) {
+    $totalIncome  = $row['total_income']  ?? 0;
+    $totalExpense = $row['total_expense'] ?? 0;
+}
+
+$netSavings = $totalIncome - $totalExpense;
+
+// =========================
+// EXPENSES BY CATEGORY
+// (for pie + category table)
+// =========================
+$catLabels = [];
+$catTotals = [];
+
+$catResult = $conn->query("
+    SELECT category, SUM(amount) AS total
+    FROM transactions
+    WHERE user_id = $user_id AND type = 'expense'
+    GROUP BY category
+    ORDER BY total DESC
+");
+
+while ($row = $catResult->fetch_assoc()) {
+    $label = $row['category'] ?: 'Uncategorized';
+    $catLabels[] = $label;
+    $catTotals[] = (float) $row['total'];
+}
+
+$totalExpenseForPercent = array_sum($catTotals);
+
+// =========================
+// MONTHLY INCOME vs EXPENSE
+// =========================
+$monthLabels = [];
+$incomeSeries = [];
+$expenseSeries = [];
+
+$monthResult = $conn->query("
+    SELECT 
+        DATE_FORMAT(date, '%b') AS month_label,
+        DATE_FORMAT(date, '%Y-%m') AS ym,
+        SUM(CASE WHEN type = 'income'  THEN amount ELSE 0 END) AS income_total,
+        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expense_total
+    FROM transactions
+    WHERE user_id = $user_id
+    GROUP BY ym, month_label
+    ORDER BY ym
+");
+
+while ($row = $monthResult->fetch_assoc()) {
+    $monthLabels[]   = $row['month_label'];
+    $incomeSeries[]  = (float) $row['income_total'];
+    $expenseSeries[] = (float) $row['expense_total'];
+}
 ?>
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Reports • TrackSmart</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="assets/css/style.css?v=30">
+    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body>
 
-<?php include "sidebar.php"; ?>
+<?php include 'sidebar.php'; ?>
 
 <div class="main-content">
+    <div class="reports-wrapper">
 
-    <div class="header-area">
-        <h1>Reports</h1>
-        <p class="subtext">Welcome back!</p>
-    </div>
-
-    <!-- SUMMARY CARDS -->
-    <div class="dashboard-cards">
-        <div class="card green">
-            <h3>Total Income</h3>
-            <p>₱<?= number_format($total_income,2) ?></p>
+        <!-- HEADER -->
+        <div class="reports-header">
+            <div class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</div>
+            <div>
+                <h1>Reports</h1>
+                <p class="subtext">Welcome back!</p>
+            </div>
         </div>
 
-        <div class="card red">
-            <h3>Total Expenses</h3>
-            <p>₱<?= number_format($total_expenses,2) ?></p>
+        <!-- TOP SUMMARY CARDS -->
+        <div class="reports-summary-row">
+            <div class="summary-card">
+                <p class="summary-label">Total Income</p>
+                <p class="summary-value income-text">₱<?= number_format($totalIncome, 2) ?></p>
+            </div>
+
+            <div class="summary-card">
+                <p class="summary-label">Total Expenses</p>
+                <p class="summary-value expense-text">₱<?= number_format($totalExpense, 2) ?></p>
+            </div>
+
+            <div class="summary-card">
+                <p class="summary-label">Net Savings</p>
+                <p class="summary-value">
+                    ₱<?= number_format($netSavings, 2) ?>
+                </p>
+            </div>
         </div>
 
-        <div class="card purple">
-            <h3>Net Savings</h3>
-            <p>₱<?= number_format($net_savings,2) ?></p>
+        <!-- CHARTS ROW -->
+        <div class="reports-chart-row">
+
+            <!-- Expense Breakdown (Pie) -->
+            <div class="chart-card">
+                <h2>Expense Breakdown</h2>
+                <canvas id="expensePie"></canvas>
+            </div>
+
+            <!-- Income vs Expenses (Bar) -->
+            <div class="chart-card">
+                <h2>Income vs Expenses</h2>
+                <canvas id="incomeExpenseBar"></canvas>
+            </div>
         </div>
-    </div>
 
-    <!-- CHARTS -->
-    <div class="chart-card">
-        <h3>Expense Breakdown</h3>
-        <canvas id="pieChart"></canvas>
-    </div>
+        <!-- CATEGORY DETAILS -->
+        <div class="category-card">
+            <h2>Category Details</h2>
 
-    <div class="chart-card">
-        <h3>Income vs Expenses</h3>
-        <canvas id="barChart"></canvas>
-    </div>
+            <table class="category-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php if ($totalExpenseForPercent <= 0): ?>
+                    <tr>
+                        <td colspan="3" class="empty">No expense data yet.</td>
+                    </tr>
+                <?php else: ?>
+                    <?php for ($i = 0; $i < count($catLabels); $i++): 
+                        $percent = ($catTotals[$i] / $totalExpenseForPercent) * 100;
+                    ?>
+                        <tr>
+                            <td><?= htmlspecialchars($catLabels[$i]) ?></td>
+                            <td>₱<?= number_format($catTotals[$i], 2) ?></td>
+                            <td><?= number_format($percent, 1) ?>%</td>
+                        </tr>
+                    <?php endfor; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
 
+    </div>
 </div>
 
 <script>
-/* --- PIE CHART DATA --- */
-const pieLabels = [
-    <?php while($r = $category_data->fetch_assoc()) echo "'".$r['name']."'," ?>
-];
+// -------------------------
+// DATA FROM PHP
+// -------------------------
+const pieLabels   = <?= json_encode($catLabels) ?>;
+const pieData     = <?= json_encode($catTotals) ?>;
+const monthLabels = <?= json_encode($monthLabels) ?>;
+const incomeData  = <?= json_encode($incomeSeries) ?>;
+const expenseData = <?= json_encode($expenseSeries) ?>;
 
-const pieValues = [
-    <?php 
-        $cat->execute();
-        $category_data = $cat->get_result();
-        while($r = $category_data->fetch_assoc()) echo $r['total']."," 
-    ?>
-];
-
-new Chart(document.getElementById("pieChart"), {
+// -------------------------
+// EXPENSE PIE CHART
+// -------------------------
+const ctxPie = document.getElementById('expensePie').getContext('2d');
+new Chart(ctxPie, {
     type: 'pie',
     data: {
         labels: pieLabels,
         datasets: [{
-            data: pieValues
+            data: pieData,
+            backgroundColor: [
+                '#6d28d9', '#f97316', '#22c55e', '#0ea5e9',
+                '#facc15', '#ec4899', '#14b8a6', '#a855f7'
+            ]
         }]
+    },
+    options: {
+        plugins: {
+            legend: { position: 'bottom' }
+        }
     }
 });
 
-/* --- BAR CHART DATA --- */
-const months = [
-    <?php while($m = $monthly_data->fetch_assoc()) echo "'".$m['month']."'," ?>
-];
-
-const incomeValues = [
-    <?php 
-        $monthly->execute(); 
-        $monthly_data = $monthly->get_result();
-        while($m = $monthly_data->fetch_assoc()) echo $m['income_total']."," 
-    ?>
-];
-
-const expenseValues = [
-    <?php 
-        $monthly->execute(); 
-        $monthly_data = $monthly->get_result();
-        while($m = $monthly_data->fetch_assoc()) echo $m['expense_total']."," 
-    ?>
-];
-
-new Chart(document.getElementById("barChart"), {
+// -------------------------
+// INCOME vs EXPENSE BAR
+// -------------------------
+const ctxBar = document.getElementById('incomeExpenseBar').getContext('2d');
+new Chart(ctxBar, {
     type: 'bar',
     data: {
-        labels: months,
+        labels: monthLabels,
         datasets: [
-            { label: "Income", data: incomeValues },
-            { label: "Expenses", data: expenseValues }
+            {
+                label: 'Income',
+                data: incomeData,
+                backgroundColor: '#22c55e'
+            },
+            {
+                label: 'Expense',
+                data: expenseData,
+                backgroundColor: '#8b5cf6'
+            }
         ]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            x: {
+                stacked: false
+            },
+            y: {
+                beginAtZero: true
+            }
+        }
     }
 });
 </script>
