@@ -1,10 +1,3 @@
-<!-- <nav>
-    <div class="ham-menu">
-        <span></span>
-        <span></span>
-        <span></span>
-    </div>
-</nav> -->
 <div class="sidebar">
     <h2 class="app-title"><img src="assets/images/logo.png" alt="Logo"></img> TrackSmart</h2>
 
@@ -56,23 +49,3 @@
       </div>
   </div>
 </div>
-
-<script>
-function confirmLogout() {
-    document.getElementById("logoutModal").style.display = "flex";
-}
-function closeLogout() {
-    document.getElementById("logoutModal").style.display = "none";
-}
-function proceedLogout() {
-    window.location.href = "logout.php"; 
-}
-</script>
-<!-- <script>
-    const menuToggle = document.getElementById("menuToggle");
-    const sidebar = document.querySelector(".sidebar");
-
-    menuToggle.addEventListener("click", () => {
-        sidebar.classList.toggle("active");
-    });
-</script> -->

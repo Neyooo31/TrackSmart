@@ -135,6 +135,8 @@ $weekTasks = $conn->query("
 
     <!-- Chart.js (for bar chart) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Dark Mode Script -->
+    <script src="assets/js/darkmode.js"></script>
 </head>
 
 <body>
@@ -216,17 +218,17 @@ $weekTasks = $conn->query("
     <!-- DASHBOARD CARDS -->
     <div class="dashboard-cards">
         <div class="card purple">
-            <h3><img src="assets/images/totalbalanceIcon.png"  class="dashboard-icon" alt="Image here" ></img>Total Balance</h3>
+            <h3><img src="assets/images/totalbalanceIcon.png"  class="dashboard-icon" alt="Image here" ></img>&nbsp;Total Balance</h3>
             <p>₱<?= number_format($balance, 2); ?></p>
         </div>
 
         <div class="card green">
-            <h3><img src="assets/images/totalincIcon.png" class="dashboard-icon" alt="Image here"></img>Total Income</h3>
+            <h3><img src="assets/images/totalincIcon.png" class="dashboard-icon" alt="Image here"></img>&nbsp;Total Income</h3>
             <p>₱<?= number_format($total_income, 2); ?></p>
         </div>
 
         <div class="card red">
-            <h3><img src="assets/images/totalexpensesIcon.png" class="dashboard-icon" alt="Image here"></img>Total Expenses</h3>
+            <h3><img src="assets/images/totalexpensesIcon.png" class="dashboard-icon" alt="Image here"></img>&nbsp;Total Expenses</h3>
             <p>₱<?= number_format($total_expenses, 2); ?></p>
         </div>
     </div>
