@@ -60,8 +60,10 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
-/* ADD TRANSACTION */
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
+/* ========================================================
+   SAVE NEW TRANSACTION
+======================================================== */
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['save_transaction'])) {
 
     $type = $_POST['type'];
     $description = $_POST['description'];

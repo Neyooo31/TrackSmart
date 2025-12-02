@@ -1248,8 +1248,8 @@ body {
 
 .notif-bell-icon-svg {
     position: absolute;
-    bottom: 1px;
-    left: 137px;
+    bottom: 10px;
+    right: 40px;
     z-index: 1000;
 }
 
